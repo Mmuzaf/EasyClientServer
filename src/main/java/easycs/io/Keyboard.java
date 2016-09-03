@@ -17,8 +17,9 @@ public final class Keyboard {
 
     public static String readLine() {
         String in;
-        try (BufferedReader br =
-                     new BufferedReader(new InputStreamReader(System.in))) {
+        try {
+            BufferedReader br =
+                    new BufferedReader(new InputStreamReader(System.in));
             in = br.readLine();
         } catch (IOException ioe) {
             logger.error(ioe.getMessage());

@@ -26,6 +26,7 @@ public class ClientRunnable implements Runnable {
         while (waiting) {
             try {
                 message = channel.readObject();
+                logger.debug("Message from channel: " + message);
                 if (Constant.SERVER_NAME.equals(message.getSender())
                         && Constant.BYE_MESSAGE.equals(message.getBody())) {
                     waiting = false;

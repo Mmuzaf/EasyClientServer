@@ -33,7 +33,7 @@ public class Client {
     }
 
     public void start() {
-        try (Socket socket = new Socket();) {
+        try (Socket socket = new Socket()) {
             socket.connect(
                     new InetSocketAddress(
                             host == null ? Constant.DEFAULT_HOST : host,
@@ -54,13 +54,14 @@ public class Client {
             rx.start();
             while (rx.isAlive()) {
                 String in = Keyboard.readLine();
+                logger.debug("Read keyboard input: " + in);
                 if (!Strings.isNullOrEmpty(in)) {
-                    Message message = new Message(clientMetaData.getClientName(), in);
-                    channel.writeObject(message);
+                    channel.writeObject(Message.getInstance(clientMetaData.getClientName(), in));
                 }
             }
-        } catch (IOException e) {
-            logger.error(e.getMessage());
+        } catch (Exception e) {
+            e.printStackTrace();
+            logger.error("Exception in Client: " + e.getMessage());
             channel.close();
         }
 

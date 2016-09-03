@@ -27,8 +27,6 @@ public class IOSocketChannel implements Closeable {
         this.socket = socket;
         this.oBuffer = new ObjectOutputStream(socket.getOutputStream());
         this.iBuffer = new ObjectInputStream(socket.getInputStream());
-
-        logger.info("Channel created: " + this.toString());
     }
 
     public synchronized void writeObject(Message message) throws IOException {

@@ -52,10 +52,12 @@ public class ServerRunnable implements Runnable {
     }
 
     protected static void broadcastServerMessage(String message) {
+        logger.debug("Send system broadcast message: " + message);
         broadcastMessage(getServerMessageInstance(message));
     }
 
     protected static void broadcastMessage(Message message) {
+        logger.debug("Send broadcast message: " + message);
         for (ServerRunnable connection : handler) {
             try {
                 connection.getChannel().writeObject(message);
@@ -67,6 +69,7 @@ public class ServerRunnable implements Runnable {
     }
 
     protected void sendUnicast(String body) {
+        logger.debug("Send system unicast message: " + body);
         try {
             channel.writeObject(getServerMessageInstance(body));
         } catch (IOException ce) {
@@ -99,7 +102,7 @@ public class ServerRunnable implements Runnable {
 
             return true;
         } catch (IOException e) {
-            logger.error(e.getMessage());
+            logger.info(e.getMessage());
             return false;
         }
     }
@@ -145,5 +148,13 @@ public class ServerRunnable implements Runnable {
 
     public IOSocketChannel getChannel() {
         return channel;
+    }
+
+    @Override
+    public String toString() {
+        return "ServerRunnable{" +
+                "channel=" + channel +
+                ", clientMetaData=" + clientMetaData +
+                '}';
     }
 }

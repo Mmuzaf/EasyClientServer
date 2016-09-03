@@ -24,6 +24,13 @@
         <processorPath useClasspath="true" />
         <module name="SimpleTCPClientServer" />
       </profile>
+      <profile default="false" name="Annotation profile for EasyClientServer" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="true" />
+        <module name="EasyClientServer" />
+      </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
       <module name="EasyClientServer" target="1.7" />
