@@ -2,31 +2,35 @@ package easycs;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Queues;
 import easycs.config.Constant;
 import easycs.data.ClientMetaData;
 import easycs.data.Message;
 import easycs.io.Command;
 import easycs.network.IOSocketChannel;
+import easycs.task.AsyncWorkerThread;
+import easycs.task.CallBackServerThread;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import java.io.IOException;
 import java.net.Socket;
+import java.util.List;
 import java.util.Queue;
 
 
 /**
  * @author Mmuzafarov
  */
-public class ServerRunnable implements Runnable {
-    private final static Log logger = LogFactory.getLog(ServerRunnable.class);
-    private final static Queue<ServerRunnable> handler = Queues.newConcurrentLinkedQueue();
+public class ServerThread implements Runnable, CallBackServerThread<List<Integer>> {
+    private final static Log logger = LogFactory.getLog(ServerThread.class);
+    private final static Queue<ServerThread> handler = Queues.newConcurrentLinkedQueue();
 
     private final IOSocketChannel channel;
     private ClientMetaData clientMetaData;
 
-    public ServerRunnable(Socket socket) throws IOException {
+    public ServerThread(Socket socket) throws IOException {
         this.channel = new IOSocketChannel(socket);
         handler.add(this);
     }
@@ -58,7 +62,7 @@ public class ServerRunnable implements Runnable {
 
     protected static void broadcastMessage(Message message) {
         logger.debug("Send broadcast message: " + message);
-        for (ServerRunnable connection : handler) {
+        for (ServerThread connection : handler) {
             try {
                 connection.getChannel().writeObject(message);
             } catch (IOException e) {
@@ -90,7 +94,7 @@ public class ServerRunnable implements Runnable {
             if (clientMetaData.getClientName().equalsIgnoreCase(Constant.SERVER_NAME))
                 return false;
 
-            for (ServerRunnable runnable : handler) {
+            for (ServerThread runnable : handler) {
                 if (runnable.clientMetaData.getClientName().equalsIgnoreCase(clientMetaData.getClientName()) && runnable != this) {
                     sendUnicast(String.format("Client with given name = [%s] already exists", clientMetaData.getClientName()));
                     return false;
@@ -119,16 +123,40 @@ public class ServerRunnable implements Runnable {
         Thread.currentThread().interrupt();
     }
 
-    public static String getCommandResult(String command) {
+    public String getCommandResult(String command) {
 
         String result;
-        Iterable<String> commandArgs = Splitter.on(" ").trimResults().split(command);
+        final Iterable<String> commandArgs = Splitter.on(" ").trimResults().split(command);
         switch (Command.getByName(Iterables.getFirst(commandArgs, Command.HELP.getName()))) {
             case ONLINE:
                 result = "There are " + Integer.toString(handler.size()) + " clients online";
                 break;
             case EXPAND:
-                result = "Execute action";
+                AsyncWorkerThread workerThread = new AsyncWorkerThread<Integer, List<Integer>>(this) {
+                    private final List<Integer> threadResult = Lists.newArrayList();
+
+                    void recursiveCalculation(int n, int k) {
+                        // k - additional parameter with start-recursion value
+                        if (k > n / 2) {
+                            threadResult.add(n);
+                            return;
+                        }
+                        // Step of recursion / recursive condition
+                        if (n % k == 0) {
+                            threadResult.add(k);
+                            recursiveCalculation(n / k, k);
+                        } else {
+                            recursiveCalculation(n, ++k);
+                        }
+                    }
+
+                    @Override
+                    protected List<Integer> doInBackground(Integer... params) {
+                        recursiveCalculation(Integer.valueOf(Lists.newArrayList(commandArgs).get(1)), 2);
+                        return threadResult;
+                    }
+                }.execute();
+                result = "Created AsyncWorkerThread for computing: " + workerThread;
                 break;
             case EXIT:
                 result = Constant.BYE_MESSAGE;
@@ -151,8 +179,17 @@ public class ServerRunnable implements Runnable {
     }
 
     @Override
+    public void pushBackResult(List<Integer> result) {
+        try {
+            channel.writeObject(getServerMessageInstance(result.toString()));
+        } catch (IOException e) {
+            logger.error(e.getCause());
+        }
+    }
+
+    @Override
     public String toString() {
-        return "ServerRunnable{" +
+        return "ServerThread{" +
                 "channel=" + channel +
                 ", clientMetaData=" + clientMetaData +
                 '}';

@@ -20,7 +20,7 @@ public class Server {
 
     public void start() {
         try (ServerSocket serverSocket = new ServerSocket(port)) {
-            new Thread(new ServerRunnable(serverSocket.accept())).start();
+            new Thread(new ServerThread(serverSocket.accept())).start();
         } catch (IOException e) {
             logger.error("Could not listen on port [" + port + "] .Check port availability and internet connection");
             System.exit(-1);

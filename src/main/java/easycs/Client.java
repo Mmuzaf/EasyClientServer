@@ -10,7 +10,6 @@ import easycs.network.IOSocketChannel;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.UUID;
@@ -50,7 +49,7 @@ public class Client {
 
             showInstructions();
 
-            Thread rx = new Thread(new ClientRunnable(channel));
+            Thread rx = new Thread(new ClientThread(channel));
             rx.start();
             while (rx.isAlive()) {
                 String in = Keyboard.readLine();
