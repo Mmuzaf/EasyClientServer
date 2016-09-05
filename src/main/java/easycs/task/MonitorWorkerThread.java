@@ -11,13 +11,23 @@ import java.util.concurrent.TimeUnit;
 /**
  * @author Mmuzafarov
  */
-public class MonitorWorkerThread implements Runnable {
+public class MonitorWorkerThread extends Thread {
     private static final Log logger = LogFactory.getLog(MonitorWorkerThread.class);
-    private BlockingQueue<Runnable> blockingQueue = Queues.newArrayBlockingQueue(100);
+
+    private MonitorWorkerThread() {
+    }
+
+    private static class MonitorWorkerHolder {
+        private static final MonitorWorkerThread HOLDER = new MonitorWorkerThread();
+    }
+
+    public static MonitorWorkerThread getMonitorInstance() {
+        return MonitorWorkerHolder.HOLDER;
+    }
 
     @Override
     public void run() {
-        ThreadPoolExecutor executor = new ThreadPoolExecutor(10, 20, 5000, TimeUnit.MILLISECONDS, blockingQueue);
 
     }
+
 }

@@ -1,6 +1,7 @@
 package easycs.task;
 
 
+import com.google.common.base.MoreObjects;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -47,12 +48,11 @@ public abstract class AsyncWorkerThread<P, R> {
      */
     public static final Executor SERIAL_EXECUTOR = new SerialExecutor();
 
-    private static final int MESSAGE_POST_RESULT = 0x1;
-
     private static volatile Executor sDefaultExecutor = SERIAL_EXECUTOR;
 
     private final WorkerRunnable<P, R> mWorker;
     private final FutureTask<R> mFuture;
+    private final CallBackServerThread<R> mCallBack;
 
     private volatile Status mStatus = Status.PENDING;
 
@@ -60,7 +60,7 @@ public abstract class AsyncWorkerThread<P, R> {
     private final AtomicBoolean mTaskInvoked = new AtomicBoolean();
 
     private static class SerialExecutor implements Executor {
-        final ArrayDeque<Runnable> mTasks = new ArrayDeque<Runnable>();
+        final ArrayDeque<Runnable> mTasks = new ArrayDeque<>();
         Runnable mActive;
 
         public synchronized void execute(final Runnable r) {
@@ -95,7 +95,9 @@ public abstract class AsyncWorkerThread<P, R> {
         FINISHED,
     }
 
-    public AsyncWorkerThread() {
+    public AsyncWorkerThread(CallBackServerThread<R> callBack) {
+        mCallBack = callBack;
+
         mWorker = new WorkerRunnable<P, R>() {
             public R call() throws Exception {
                 mTaskInvoked.set(true);
@@ -119,6 +121,7 @@ public abstract class AsyncWorkerThread<P, R> {
                     postResultIfNotInvoked(null);
                 }
             }
+
         };
     }
 
@@ -130,9 +133,7 @@ public abstract class AsyncWorkerThread<P, R> {
     }
 
     private R postResult(R result) {
-//        Message message = getHandler().obtainMessage(MESSAGE_POST_RESULT,
-//                new AsyncWorkerThreadResult<R>(this, result));
-//        message.sendToTarget();
+        finish(result);
         return result;
     }
 
@@ -170,8 +171,8 @@ public abstract class AsyncWorkerThread<P, R> {
         return executeOnExecutor(sDefaultExecutor, params);
     }
 
-    public final AsyncWorkerThread<P, R> executeOnExecutor(Executor exec,
-                                                           P... params) {
+    private AsyncWorkerThread<P, R> executeOnExecutor(Executor exec,
+                                                      P... params) {
         if (mStatus != Status.PENDING) {
             switch (mStatus) {
                 case RUNNING:
@@ -191,10 +192,6 @@ public abstract class AsyncWorkerThread<P, R> {
         return this;
     }
 
-    public static void execute(Runnable runnable) {
-        sDefaultExecutor.execute(runnable);
-    }
-
     private void finish(R result) {
         if (!isCancelled()) {
             onPostExecute(result);
@@ -202,10 +199,18 @@ public abstract class AsyncWorkerThread<P, R> {
         mStatus = Status.FINISHED;
     }
 
-    private static abstract class WorkerRunnable<Params, Result> implements Callable<Result> {
-        Params[] mParams;
+    private static abstract class WorkerRunnable<P, R> implements Callable<R> {
+        P[] mParams;
     }
 
     protected void onPostExecute(R result) {
+        mCallBack.pushBackResult(result);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("mFuture", mFuture)
+                .toString();
     }
 }

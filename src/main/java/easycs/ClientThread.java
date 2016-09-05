@@ -11,11 +11,11 @@ import java.io.IOException;
 /**
  * @author Mmuzafarov
  */
-public class ClientRunnable implements Runnable {
-    private final static Log logger = LogFactory.getLog(ClientRunnable.class);
+public class ClientThread implements Runnable {
+    private final static Log logger = LogFactory.getLog(ClientThread.class);
     private final IOSocketChannel channel;
 
-    public ClientRunnable(IOSocketChannel socket) {
+    public ClientThread(IOSocketChannel socket) {
         channel = socket;
     }
 
