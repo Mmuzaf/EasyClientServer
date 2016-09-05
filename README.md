@@ -15,6 +15,12 @@ example: `java -jar  SimpleTCPClientServer-1.0-SNAPSHOT.jar -l 8001`
 
  example: `java -jar SimpleTCPClientServer-1.0-SNAPSHOT.jar -l localhost 8001`
 
+##### Available commands for client application
+ /online          - Return number of connected clients
+ /expand [number] - Get number multipliers
+ /exit            - Disconnect normally from server
+ /help            - Get additional information
+
 ## Building sources
 Intellij IDEA 15.0.1 was used and JDK 8 environment. However any java compiler should work if source files are setup correctly.
 
