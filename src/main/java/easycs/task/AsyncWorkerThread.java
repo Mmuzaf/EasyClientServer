@@ -54,7 +54,7 @@ public abstract class AsyncWorkerThread<P, R> {
     private final FutureTask<R> mFuture;
     private final CallBackServerThread<R> mCallBack;
 
-    private volatile Status mStatus = Status.PENDING;
+    private volatile AsyncThreadStatus mStatus = AsyncThreadStatus.PENDING;
 
     private final AtomicBoolean mCancelled = new AtomicBoolean();
     private final AtomicBoolean mTaskInvoked = new AtomicBoolean();
@@ -83,16 +83,6 @@ public abstract class AsyncWorkerThread<P, R> {
                 THREAD_POOL_EXECUTOR.execute(mActive);
             }
         }
-    }
-
-    /**
-     * Indicates the current status of the task. Each status will be set only once
-     * during the lifetime of a task.
-     */
-    public enum Status {
-        PENDING,
-        RUNNING,
-        FINISHED,
     }
 
     public AsyncWorkerThread(CallBackServerThread<R> callBack) {
@@ -142,7 +132,7 @@ public abstract class AsyncWorkerThread<P, R> {
      *
      * @return The current status.
      */
-    public final Status getStatus() {
+    public final AsyncThreadStatus getStatus() {
         return mStatus;
     }
 
@@ -173,7 +163,7 @@ public abstract class AsyncWorkerThread<P, R> {
 
     private AsyncWorkerThread<P, R> executeOnExecutor(Executor exec,
                                                       P... params) {
-        if (mStatus != Status.PENDING) {
+        if (mStatus != AsyncThreadStatus.PENDING) {
             switch (mStatus) {
                 case RUNNING:
                     throw new IllegalStateException("Cannot execute task:"
@@ -185,7 +175,7 @@ public abstract class AsyncWorkerThread<P, R> {
             }
         }
 
-        mStatus = Status.RUNNING;
+        mStatus = AsyncThreadStatus.RUNNING;
         mWorker.mParams = params;
         exec.execute(mFuture);
 
@@ -196,7 +186,7 @@ public abstract class AsyncWorkerThread<P, R> {
         if (!isCancelled()) {
             onPostExecute(result);
         }
-        mStatus = Status.FINISHED;
+        mStatus = AsyncThreadStatus.FINISHED;
     }
 
     private static abstract class WorkerRunnable<P, R> implements Callable<R> {
@@ -213,4 +203,11 @@ public abstract class AsyncWorkerThread<P, R> {
                 .add("mFuture", mFuture)
                 .toString();
     }
+
+    public interface CallBackServerThread<R> {
+
+        void pushBackResult(R result);
+
+    }
+
 }

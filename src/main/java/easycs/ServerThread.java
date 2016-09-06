@@ -10,7 +10,6 @@ import easycs.data.Message;
 import easycs.io.Command;
 import easycs.network.IOSocketChannel;
 import easycs.task.AsyncWorkerThread;
-import easycs.task.CallBackServerThread;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -23,7 +22,7 @@ import java.util.Queue;
 /**
  * @author Mmuzafarov
  */
-public class ServerThread implements Runnable, CallBackServerThread<List<Integer>> {
+public class ServerThread implements Runnable, AsyncWorkerThread.CallBackServerThread<List<Integer>> {
     private final static Log logger = LogFactory.getLog(ServerThread.class);
     private final static Queue<ServerThread> handler = Queues.newConcurrentLinkedQueue();
 
