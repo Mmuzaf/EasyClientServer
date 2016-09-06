@@ -83,7 +83,7 @@ public class ServerThread implements Runnable, AsyncWorkerThread.CallBackServerT
     }
 
     protected static Message getServerMessageInstance(String body) {
-        return Message.getInstance(Constant.SERVER_NAME, body);
+        return Message.getNewInstance(Constant.SERVER_NAME, body);
     }
 
     protected boolean clientAuthentication() {
@@ -126,7 +126,7 @@ public class ServerThread implements Runnable, AsyncWorkerThread.CallBackServerT
 
         String result;
         final Iterable<String> commandArgs = Splitter.on(" ").trimResults().split(command);
-        switch (Command.getByName(Iterables.getFirst(commandArgs, Command.HELP.getName()))) {
+        switch (Command.getByName(Iterables.getFirst(commandArgs, Command.HELP.toString()))) {
             case ONLINE:
                 result = "There are " + Integer.toString(handler.size()) + " clients online";
                 break;

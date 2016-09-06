@@ -7,5 +7,5 @@ package easycs.task;
 public enum AsyncThreadStatus {
     PENDING,
     RUNNING,
-    FINISHED,
+    FINISHED
 }

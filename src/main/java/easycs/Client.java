@@ -45,7 +45,7 @@ public class Client {
             // Authorization
             channel.sendUser(clientMetaData);
             System.out.println(channel.readObject().toString());
-            channel.isClosed();
+            channel.closeChannelIfSocketClosed();
 
             showInstructions();
 
@@ -55,7 +55,7 @@ public class Client {
                 String in = Keyboard.readLine();
                 logger.debug("Read keyboard input: " + in);
                 if (!Strings.isNullOrEmpty(in)) {
-                    channel.writeObject(Message.getInstance(clientMetaData.getClientName(), in));
+                    channel.writeObject(Message.getNewInstance(clientMetaData.getClientName(), in));
                 }
             }
         } catch (Exception e) {
