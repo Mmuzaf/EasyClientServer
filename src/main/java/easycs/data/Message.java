@@ -40,7 +40,7 @@ public class Message implements Serializable {
         return user;
     }
 
-    public static Message getInstance(String user, String body) {
+    public static Message getNewInstance(String user, String body) {
         return new Message(user, body);
     }
 }

@@ -30,12 +30,12 @@ public class IOSocketChannel implements Closeable {
     }
 
     public synchronized void writeObject(Message message) throws IOException {
-        isClosed();
+        closeChannelIfSocketClosed();
         oBuffer.writeObject(message);
     }
 
     public Message readObject() throws IOException {
-        isClosed();
+        closeChannelIfSocketClosed();
         Message message;
         try {
             message = (Message) iBuffer.readObject();
@@ -47,13 +47,13 @@ public class IOSocketChannel implements Closeable {
 
 
     public void sendUser(ClientMetaData clientMetaData) throws IOException {
-        isClosed();
+        closeChannelIfSocketClosed();
         oBuffer.writeObject(clientMetaData);
     }
 
     public ClientMetaData getUser() throws IOException {
         ClientMetaData clientMetaData = new ClientMetaData("Unknown");
-        isClosed();
+        closeChannelIfSocketClosed();
         try {
             clientMetaData = (ClientMetaData) iBuffer.readObject();
         } catch (ClassNotFoundException e) {
@@ -62,7 +62,7 @@ public class IOSocketChannel implements Closeable {
         return clientMetaData;
     }
 
-    public void isClosed() throws ChannelClosedException {
+    public void closeChannelIfSocketClosed() throws ChannelClosedException {
         if (socket.isClosed()) {
             close();
             throw new ChannelClosedException("Socket " + socket.toString() + " is closed.");
