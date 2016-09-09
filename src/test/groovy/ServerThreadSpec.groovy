@@ -1,0 +1,5 @@
+/**
+ * @author Mmuzafarov
+ */
+class ServerThreadSpec {
+}
