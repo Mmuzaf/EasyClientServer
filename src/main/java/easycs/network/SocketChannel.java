@@ -7,7 +7,6 @@ import easycs.exception.ChannelClosedException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -16,24 +15,26 @@ import java.net.Socket;
 /**
  * @author Mmuzafarov
  */
-public class IOSocketChannel implements Closeable {
-    private final static Log logger = LogFactory.getLog(IOSocketChannel.class);
+public class SocketChannel implements SocketChannelClosable {
+    private final static Log logger = LogFactory.getLog(SocketChannel.class);
 
     private final Socket socket;
     private final ObjectOutputStream oBuffer;
     private final ObjectInputStream iBuffer;
 
-    public IOSocketChannel(Socket socket) throws IOException {
+    protected SocketChannel(Socket socket, ObjectOutputStream oBuffer, ObjectInputStream iBuffer) {
         this.socket = socket;
-        this.oBuffer = new ObjectOutputStream(socket.getOutputStream());
-        this.iBuffer = new ObjectInputStream(socket.getInputStream());
+        this.oBuffer = oBuffer;
+        this.iBuffer = iBuffer;
     }
 
+    @Override
     public synchronized void writeObject(Message message) throws IOException {
         closeChannelIfSocketClosed();
         oBuffer.writeObject(message);
     }
 
+    @Override
     public Message readObject() throws IOException {
         closeChannelIfSocketClosed();
         Message message;
@@ -46,11 +47,13 @@ public class IOSocketChannel implements Closeable {
     }
 
 
+    @Override
     public void sendUser(ClientMetaData clientMetaData) throws IOException {
         closeChannelIfSocketClosed();
         oBuffer.writeObject(clientMetaData);
     }
 
+    @Override
     public ClientMetaData getUser() throws IOException {
         ClientMetaData clientMetaData = new ClientMetaData("Unknown");
         closeChannelIfSocketClosed();
@@ -72,6 +75,12 @@ public class IOSocketChannel implements Closeable {
     @Override
     public void close() {
         try {
+            if (socket != null)
+                socket.close();
+        } catch (IOException e) {
+            logger.error(e.getMessage());
+        }
+        try {
             if (iBuffer != null)
                 iBuffer.close();
         } catch (IOException e) {
@@ -83,6 +92,7 @@ public class IOSocketChannel implements Closeable {
         } catch (IOException e) {
             logger.error(e.getMessage());
         }
+        logger.info("SocketChannel closed");
     }
 
     @Override

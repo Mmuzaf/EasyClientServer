@@ -2,16 +2,14 @@ package easycs;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
-import easycs.config.Constant;
 import easycs.data.ClientMetaData;
 import easycs.data.Message;
 import easycs.io.Keyboard;
-import easycs.network.IOSocketChannel;
+import easycs.network.SocketChannelClosable;
+import easycs.network.SocketChannelFactory;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import java.net.InetSocketAddress;
-import java.net.Socket;
 import java.util.UUID;
 
 /**
@@ -20,7 +18,6 @@ import java.util.UUID;
 public class Client {
     private final static Log logger = LogFactory.getLog(Client.class);
 
-    private IOSocketChannel channel;
     private final Integer port;
     private final String host;
     private final ClientMetaData clientMetaData;
@@ -32,20 +29,13 @@ public class Client {
     }
 
     public void start() {
-        try (Socket socket = new Socket()) {
-            socket.connect(
-                    new InetSocketAddress(
-                            host == null ? Constant.DEFAULT_HOST : host,
-                            port == null ? Constant.DEFAULT_PORT : port
-                    ),
-                    2000
-            );
-            channel = new IOSocketChannel(socket);
-
+        try (SocketChannelClosable channel =
+                     SocketChannelFactory.getClientSocketChannelInstance(host, port)
+        ) {
             // Authorization
+            System.out.println(channel.toString());
             channel.sendUser(clientMetaData);
             System.out.println(channel.readObject().toString());
-            channel.closeChannelIfSocketClosed();
 
             showInstructions();
 
@@ -59,9 +49,8 @@ public class Client {
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            e.printStackTrace(System.out);
             logger.error("Exception in Client: " + e.getMessage());
-            channel.close();
         }
 
     }

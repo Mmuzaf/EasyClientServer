@@ -1,6 +1,6 @@
 import easycs.ServerThread
 import easycs.data.ClientMetaData
-import easycs.network.IOSocketChannel
+import easycs.network.SocketObjectStream
 import spock.lang.Specification
 
 /**
@@ -22,7 +22,7 @@ class ServerThreadSpec extends Specification {
 
     def "Execution server command successful"() {
         setup:
-            def channel = Mock(IOSocketChannel)
+            def channel = Mock(SocketObjectStream)
             def socket = Mock(Socket)
             socket.getOutputStream() >> Mock(OutputStream)
             socket.getInputStream() >> Mock(InputStream)

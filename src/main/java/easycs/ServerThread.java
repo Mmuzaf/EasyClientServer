@@ -8,7 +8,8 @@ import easycs.config.Constant;
 import easycs.data.ClientMetaData;
 import easycs.data.Message;
 import easycs.io.Command;
-import easycs.network.IOSocketChannel;
+import easycs.network.SocketChannelClosable;
+import easycs.network.SocketChannelFactory;
 import easycs.task.AsyncWorkerThread;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -26,11 +27,11 @@ public class ServerThread implements Runnable, AsyncWorkerThread.CallBackServerT
     private final static Log logger = LogFactory.getLog(ServerThread.class);
     private final static Queue<ServerThread> handler = Queues.newConcurrentLinkedQueue();
 
-    private final IOSocketChannel channel;
+    private final SocketChannelClosable channel;
     private ClientMetaData clientMetaData;
 
-    public ServerThread(Socket socket) throws IOException {
-        this.channel = new IOSocketChannel(socket);
+    public ServerThread(SocketChannelClosable channel) throws IOException {
+        this.channel = channel;
         handler.add(this);
     }
 
@@ -66,7 +67,7 @@ public class ServerThread implements Runnable, AsyncWorkerThread.CallBackServerT
                 connection.getChannel().writeObject(message);
             } catch (IOException e) {
                 logger.warn("Exception on broadMessage()" + e.toString());
-                connection.getChannel().close();
+                connection.close();
             }
         }
     }
@@ -117,7 +118,7 @@ public class ServerThread implements Runnable, AsyncWorkerThread.CallBackServerT
         } catch (Exception e) {
             logger.error(e.getMessage());
         }
-        channel.close();
+        close();
         handler.remove(this);
         Thread.currentThread().interrupt();
     }
@@ -173,8 +174,17 @@ public class ServerThread implements Runnable, AsyncWorkerThread.CallBackServerT
         return result;
     }
 
-    public IOSocketChannel getChannel() {
+    public SocketChannelClosable getChannel() {
         return channel;
+    }
+
+    protected void close() {
+        try {
+            if (channel != null)
+                channel.close();
+        } catch (IOException e) {
+            logger.error(e.getCause());
+        }
     }
 
     @Override
