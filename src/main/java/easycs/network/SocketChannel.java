@@ -22,7 +22,7 @@ public class SocketChannel implements SocketChannelClosable {
     private final ObjectOutputStream oBuffer;
     private final ObjectInputStream iBuffer;
 
-    protected SocketChannel(Socket socket, ObjectOutputStream oBuffer, ObjectInputStream iBuffer) {
+    public SocketChannel(Socket socket, ObjectOutputStream oBuffer, ObjectInputStream iBuffer) {
         this.socket = socket;
         this.oBuffer = oBuffer;
         this.iBuffer = iBuffer;
@@ -70,6 +70,14 @@ public class SocketChannel implements SocketChannelClosable {
             close();
             throw new ChannelClosedException("Socket " + socket.toString() + " is closed.");
         }
+    }
+
+    public ObjectOutputStream getoBuffer() {
+        return oBuffer;
+    }
+
+    public ObjectInputStream getiBuffer() {
+        return iBuffer;
     }
 
     @Override

@@ -28,7 +28,9 @@ public class ServerThread implements Runnable, AsyncWorkerThread.CallBackServerT
     private final static Queue<ServerThread> handler = Queues.newConcurrentLinkedQueue();
 
     private final SocketChannelClosable channel;
-    private ClientMetaData clientMetaData;
+
+    protected ClientMetaData clientMetaData;
+    protected boolean authSuccess;
 
     public ServerThread(SocketChannelClosable channel) throws IOException {
         this.channel = channel;
@@ -38,20 +40,20 @@ public class ServerThread implements Runnable, AsyncWorkerThread.CallBackServerT
     @Override
     public void run() {
         Message message;
-        boolean waiting = clientAuthentication();
+        clientAuthentication();
 
         try {
-            while (waiting) {
+            while (authSuccess) {
                 message = channel.readObject();
-                if (message.getBody().charAt(0) == '/') {
+                if (message.getBody().charAt(0) == Constant.COMMAND_START_WITH_CHAR) {
                     sendUnicast(getCommandResult(message.getBody().substring(1)));
                 } else
                     broadcastMessage(message);
             }
         } catch (Exception e) {
-            logger.error("Unknown " + e.getMessage());
+            logger.error("Unknown " + e.getCause());
         } finally {
-            clientDisconnect(waiting);
+            clientDisconnect(authSuccess);
         }
     }
 
@@ -87,27 +89,27 @@ public class ServerThread implements Runnable, AsyncWorkerThread.CallBackServerT
         return Message.getNewInstance(Constant.SERVER_NAME, body);
     }
 
-    protected boolean clientAuthentication() {
+    protected void clientAuthentication() {
         try {
             clientMetaData = channel.getUser();
 
             if (clientMetaData.getClientName().equalsIgnoreCase(Constant.SERVER_NAME))
-                return false;
+                authSuccess = false;
 
             for (ServerThread runnable : handler) {
                 if (runnable.clientMetaData.getClientName().equalsIgnoreCase(clientMetaData.getClientName()) && runnable != this) {
                     sendUnicast(String.format("Client with given name = [%s] already exists", clientMetaData.getClientName()));
-                    return false;
+                    authSuccess = false;
                 }
             }
 
             sendUnicast(String.format(Constant.WELCOME_MESSAGE, clientMetaData.getClientName()));
             broadcastServerMessage(String.format(Constant.JOIN_MESSAGE, clientMetaData.getClientName()));
 
-            return true;
+            authSuccess = true;
         } catch (IOException e) {
             logger.info(e.getMessage());
-            return false;
+            authSuccess = false;
         }
     }
 
@@ -129,7 +131,7 @@ public class ServerThread implements Runnable, AsyncWorkerThread.CallBackServerT
         final Iterable<String> commandArgs = Splitter.on(" ").trimResults().split(command);
         switch (Command.getByName(Iterables.getFirst(commandArgs, Command.HELP.toString()))) {
             case ONLINE:
-                result = "There are " + Integer.toString(handler.size()) + " clients online";
+                result = String.format(Constant.ONLINE_COMMAND_MSG, Integer.toString(handler.size()));
                 break;
             case EXPAND:
                 AsyncWorkerThread workerThread = new AsyncWorkerThread<Integer, List<Integer>>(this) {
