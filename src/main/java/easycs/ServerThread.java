@@ -1,5 +1,6 @@
 package easycs;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -30,7 +31,7 @@ public class ServerThread implements Runnable, AsyncWorkerThread.CallBackServerT
     private final SocketChannelClosable channel;
 
     protected ClientMetaData clientMetaData;
-    protected boolean authSuccess;
+    protected Boolean authSuccess;
 
     public ServerThread(SocketChannelClosable channel) throws IOException {
         this.channel = channel;
@@ -40,7 +41,7 @@ public class ServerThread implements Runnable, AsyncWorkerThread.CallBackServerT
     @Override
     public void run() {
         Message message;
-        clientAuthentication();
+        authSuccess = clientAuthentication();
 
         try {
             while (authSuccess) {
@@ -51,35 +52,35 @@ public class ServerThread implements Runnable, AsyncWorkerThread.CallBackServerT
                     broadcastMessage(message);
             }
         } catch (Exception e) {
-            logger.error("Unknown " + e.getCause());
+            getLogger().error("Unknown " + e.getCause());
         } finally {
             clientDisconnect(authSuccess);
         }
     }
 
-    protected static void broadcastServerMessage(String message) {
-        logger.debug("Send system broadcast message: " + message);
+    protected void broadcastServerMessage(String message) {
+        getLogger().debug("Send system broadcast message: " + message);
         broadcastMessage(getServerMessageInstance(message));
     }
 
-    protected static void broadcastMessage(Message message) {
-        logger.debug("Send broadcast message: " + message);
+    protected void broadcastMessage(Message message) {
+        getLogger().debug("Send broadcast message: " + message);
         for (ServerThread connection : handler) {
             try {
                 connection.getChannel().writeObject(message);
             } catch (IOException e) {
-                logger.warn("Exception on broadMessage()" + e.toString());
+                getLogger().warn("Exception on broadMessage()" + e.toString());
                 connection.close();
             }
         }
     }
 
     protected void sendUnicast(String body) {
-        logger.debug("Send system unicast message: " + body);
+        getLogger().debug("Send system unicast message: " + body);
         try {
             channel.writeObject(getServerMessageInstance(body));
         } catch (IOException ce) {
-            logger.error(ce.getMessage());
+            getLogger().error(ce.getMessage());
             clientDisconnect(true);
         }
 
@@ -89,27 +90,33 @@ public class ServerThread implements Runnable, AsyncWorkerThread.CallBackServerT
         return Message.getNewInstance(Constant.SERVER_NAME, body);
     }
 
-    protected void clientAuthentication() {
+    public boolean clientAuthentication() {
+
+        if (authSuccess != null)
+            return authSuccess;
+
         try {
+            Preconditions.checkNotNull(channel);
+
             clientMetaData = channel.getUser();
 
             if (clientMetaData.getClientName().equalsIgnoreCase(Constant.SERVER_NAME))
-                authSuccess = false;
+                return false;
 
             for (ServerThread runnable : handler) {
-                if (runnable.clientMetaData.getClientName().equalsIgnoreCase(clientMetaData.getClientName()) && runnable != this) {
+                if (runnable.getClientMetaData().getClientName().equalsIgnoreCase(clientMetaData.getClientName()) && runnable != this) {
                     sendUnicast(String.format("Client with given name = [%s] already exists", clientMetaData.getClientName()));
-                    authSuccess = false;
+                    return false;
                 }
             }
 
             sendUnicast(String.format(Constant.WELCOME_MESSAGE, clientMetaData.getClientName()));
             broadcastServerMessage(String.format(Constant.JOIN_MESSAGE, clientMetaData.getClientName()));
 
-            authSuccess = true;
+            return true;
         } catch (IOException e) {
-            logger.info(e.getMessage());
-            authSuccess = false;
+            getLogger().info(e.getMessage());
+            return false;
         }
     }
 
@@ -118,7 +125,7 @@ public class ServerThread implements Runnable, AsyncWorkerThread.CallBackServerT
             if (waslogin)
                 broadcastServerMessage(String.format(Constant.DISCONNECT_MESSAGE, clientMetaData.getClientName()));
         } catch (Exception e) {
-            logger.error(e.getMessage());
+            getLogger().error(e.getMessage());
         }
         close();
         handler.remove(this);
@@ -185,7 +192,7 @@ public class ServerThread implements Runnable, AsyncWorkerThread.CallBackServerT
             if (channel != null)
                 channel.close();
         } catch (IOException e) {
-            logger.error(e.getCause());
+            getLogger().error(e.getCause());
         }
     }
 
@@ -194,8 +201,20 @@ public class ServerThread implements Runnable, AsyncWorkerThread.CallBackServerT
         try {
             channel.writeObject(getServerMessageInstance(result.toString()));
         } catch (IOException e) {
-            logger.error(e.getCause());
+            getLogger().error(e.getCause());
         }
+    }
+
+    public ClientMetaData getClientMetaData() {
+        return clientMetaData;
+    }
+
+    public boolean isAuthSuccess() {
+        return authSuccess;
+    }
+
+    public Log getLogger() {
+        return logger;
     }
 
     @Override

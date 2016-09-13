@@ -25,7 +25,7 @@ public class Client {
     public Client(String host, Integer port) {
         this.host = host;
         this.port = port;
-        clientMetaData = new ClientMetaData(UUID.randomUUID().toString());
+        clientMetaData = ClientMetaData.getRandomClientMetaData();
     }
 
     public void start() {
