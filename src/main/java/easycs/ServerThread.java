@@ -1,5 +1,6 @@
 package easycs;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -8,7 +9,8 @@ import easycs.config.Constant;
 import easycs.data.ClientMetaData;
 import easycs.data.Message;
 import easycs.io.Command;
-import easycs.network.IOSocketChannel;
+import easycs.network.SocketChannelClosable;
+import easycs.network.SocketChannelFactory;
 import easycs.task.AsyncWorkerThread;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -26,57 +28,59 @@ public class ServerThread implements Runnable, AsyncWorkerThread.CallBackServerT
     private final static Log logger = LogFactory.getLog(ServerThread.class);
     private final static Queue<ServerThread> handler = Queues.newConcurrentLinkedQueue();
 
-    private final IOSocketChannel channel;
-    private ClientMetaData clientMetaData;
+    private final SocketChannelClosable channel;
 
-    public ServerThread(Socket socket) throws IOException {
-        this.channel = new IOSocketChannel(socket);
+    protected ClientMetaData clientMetaData;
+    protected Boolean authSuccess;
+
+    public ServerThread(SocketChannelClosable channel) throws IOException {
+        this.channel = channel;
         handler.add(this);
     }
 
     @Override
     public void run() {
         Message message;
-        boolean waiting = clientAuthentication();
+        authSuccess = clientAuthentication();
 
         try {
-            while (waiting) {
+            while (authSuccess) {
                 message = channel.readObject();
-                if (message.getBody().charAt(0) == '/') {
+                if (message.getBody().charAt(0) == Constant.COMMAND_START_WITH_CHAR) {
                     sendUnicast(getCommandResult(message.getBody().substring(1)));
                 } else
                     broadcastMessage(message);
             }
         } catch (Exception e) {
-            logger.error("Unknown " + e.getMessage());
+            getLogger().error("Unknown " + e.getCause());
         } finally {
-            clientDisconnect(waiting);
+            clientDisconnect(authSuccess);
         }
     }
 
-    protected static void broadcastServerMessage(String message) {
-        logger.debug("Send system broadcast message: " + message);
+    protected void broadcastServerMessage(String message) {
+        getLogger().debug("Send system broadcast message: " + message);
         broadcastMessage(getServerMessageInstance(message));
     }
 
-    protected static void broadcastMessage(Message message) {
-        logger.debug("Send broadcast message: " + message);
+    protected void broadcastMessage(Message message) {
+        getLogger().debug("Send broadcast message: " + message);
         for (ServerThread connection : handler) {
             try {
                 connection.getChannel().writeObject(message);
             } catch (IOException e) {
-                logger.warn("Exception on broadMessage()" + e.toString());
-                connection.getChannel().close();
+                getLogger().warn("Exception on broadMessage()" + e.toString());
+                connection.close();
             }
         }
     }
 
     protected void sendUnicast(String body) {
-        logger.debug("Send system unicast message: " + body);
+        getLogger().debug("Send system unicast message: " + body);
         try {
             channel.writeObject(getServerMessageInstance(body));
         } catch (IOException ce) {
-            logger.error(ce.getMessage());
+            getLogger().error(ce.getMessage());
             clientDisconnect(true);
         }
 
@@ -86,15 +90,21 @@ public class ServerThread implements Runnable, AsyncWorkerThread.CallBackServerT
         return Message.getNewInstance(Constant.SERVER_NAME, body);
     }
 
-    protected boolean clientAuthentication() {
+    public boolean clientAuthentication() {
+
+        if (authSuccess != null)
+            return authSuccess;
+
         try {
+            Preconditions.checkNotNull(channel);
+
             clientMetaData = channel.getUser();
 
             if (clientMetaData.getClientName().equalsIgnoreCase(Constant.SERVER_NAME))
                 return false;
 
             for (ServerThread runnable : handler) {
-                if (runnable.clientMetaData.getClientName().equalsIgnoreCase(clientMetaData.getClientName()) && runnable != this) {
+                if (runnable.getClientMetaData().getClientName().equalsIgnoreCase(clientMetaData.getClientName()) && runnable != this) {
                     sendUnicast(String.format("Client with given name = [%s] already exists", clientMetaData.getClientName()));
                     return false;
                 }
@@ -105,7 +115,7 @@ public class ServerThread implements Runnable, AsyncWorkerThread.CallBackServerT
 
             return true;
         } catch (IOException e) {
-            logger.info(e.getMessage());
+            getLogger().info(e.getMessage());
             return false;
         }
     }
@@ -115,9 +125,9 @@ public class ServerThread implements Runnable, AsyncWorkerThread.CallBackServerT
             if (waslogin)
                 broadcastServerMessage(String.format(Constant.DISCONNECT_MESSAGE, clientMetaData.getClientName()));
         } catch (Exception e) {
-            logger.error(e.getMessage());
+            getLogger().error(e.getMessage());
         }
-        channel.close();
+        close();
         handler.remove(this);
         Thread.currentThread().interrupt();
     }
@@ -128,7 +138,7 @@ public class ServerThread implements Runnable, AsyncWorkerThread.CallBackServerT
         final Iterable<String> commandArgs = Splitter.on(" ").trimResults().split(command);
         switch (Command.getByName(Iterables.getFirst(commandArgs, Command.HELP.toString()))) {
             case ONLINE:
-                result = "There are " + Integer.toString(handler.size()) + " clients online";
+                result = String.format(Constant.ONLINE_COMMAND_MSG, Integer.toString(handler.size()));
                 break;
             case EXPAND:
                 AsyncWorkerThread workerThread = new AsyncWorkerThread<Integer, List<Integer>>(this) {
@@ -173,8 +183,17 @@ public class ServerThread implements Runnable, AsyncWorkerThread.CallBackServerT
         return result;
     }
 
-    public IOSocketChannel getChannel() {
+    public SocketChannelClosable getChannel() {
         return channel;
+    }
+
+    protected void close() {
+        try {
+            if (channel != null)
+                channel.close();
+        } catch (IOException e) {
+            getLogger().error(e.getCause());
+        }
     }
 
     @Override
@@ -182,8 +201,20 @@ public class ServerThread implements Runnable, AsyncWorkerThread.CallBackServerT
         try {
             channel.writeObject(getServerMessageInstance(result.toString()));
         } catch (IOException e) {
-            logger.error(e.getCause());
+            getLogger().error(e.getCause());
         }
+    }
+
+    public ClientMetaData getClientMetaData() {
+        return clientMetaData;
+    }
+
+    public boolean isAuthSuccess() {
+        return authSuccess;
+    }
+
+    public Log getLogger() {
+        return logger;
     }
 
     @Override
