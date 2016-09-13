@@ -2,7 +2,8 @@ package easycs;
 
 import easycs.config.Constant;
 import easycs.data.Message;
-import easycs.network.IOSocketChannel;
+import easycs.network.SocketChannel;
+import easycs.network.SocketChannelClosable;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -13,10 +14,10 @@ import java.io.IOException;
  */
 public class ClientThread implements Runnable {
     private final static Log logger = LogFactory.getLog(ClientThread.class);
-    private final IOSocketChannel channel;
+    private final SocketChannelClosable channel;
 
-    public ClientThread(IOSocketChannel socket) {
-        channel = socket;
+    public ClientThread(SocketChannelClosable channelClosable) {
+        channel = channelClosable;
     }
 
     @Override

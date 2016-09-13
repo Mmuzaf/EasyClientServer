@@ -3,6 +3,7 @@ package easycs.data;
 import com.google.common.base.MoreObjects;
 
 import java.io.Serializable;
+import java.util.UUID;
 
 /**
  * @author Mmuzafarov
@@ -17,6 +18,10 @@ public class ClientMetaData implements Serializable {
 
     public String getClientName() {
         return clientName;
+    }
+
+    public static ClientMetaData getRandomClientMetaData() {
+        return new ClientMetaData(UUID.randomUUID().toString());
     }
 
     @Override

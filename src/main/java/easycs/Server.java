@@ -1,5 +1,7 @@
 package easycs;
 
+import easycs.network.SocketChannelClosable;
+import easycs.network.SocketChannelFactory;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -20,7 +22,14 @@ public class Server {
 
     public void start() {
         try (ServerSocket serverSocket = new ServerSocket(port)) {
-            new Thread(new ServerThread(serverSocket.accept())).start();
+            //noinspection InfiniteLoopStatement
+            while(true) {
+                new Thread(
+                        new ServerThread(
+                                SocketChannelFactory.getServerSocketChannelInstance(serverSocket)
+                        )
+                ).start();
+            }
         } catch (IOException e) {
             logger.error("Could not listen on port [" + port + "] .Check port availability and internet connection");
             System.exit(-1);
