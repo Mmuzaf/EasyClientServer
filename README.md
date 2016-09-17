@@ -1,8 +1,13 @@
 # EasyClientServer
-Java terminal client server application and multi-client-server using TCP connections with sockets.
+Java console client server application and multi-client-server using TCP connections with Sockets.
+Server path can executes some additional tasks asynchronously with Server thread, you can also add new 
+commands for it (for current implementation it uses /EXPAND [number] command to get multipliers of provided number) 
+
+Basic technologies & examples of: Guava, Apache commons-logging, commons-cli
+For unit-test purposes: Spock Framework with Guava
 
 ## Usage
-Setup this application to work as server, or as a client.
+Has one entry point, so setup this application to work as server, or as a client.
 
 #### Server
 `java -jar  SimpleTCPClientServer-[CURRENT_VERSION]-SNAPSHOT.jar -l port`
